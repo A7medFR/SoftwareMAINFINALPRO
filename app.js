@@ -1,6 +1,7 @@
 /**
- * TaskFlow - Core Task Management & LocalStorage Engine
- * Part of Final Project: Git & GitHub Duo Workflow
+ * TaskFlow &mdash; Modern Productivity & Task Management Web App
+ * Interactive Engine: CRUD, LocalStorage, Themes, Dynamic Filters & Analytics
+ * Final Project: Git & GitHub Workflow Demonstration
  */
 
 // Application State
@@ -25,7 +26,27 @@ const taskDescInput = document.getElementById('taskDesc');
 const taskListContainer = document.getElementById('taskList');
 const emptyStateElement = document.getElementById('emptyState');
 
-// Initial Sample Data (Demonstrates capability on first visit)
+// Search & Filter DOM
+const searchInput = document.getElementById('searchInput');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
+const sortFilterSelect = document.getElementById('sortFilter');
+const filterTabsContainer = document.getElementById('filterTabs');
+const clearCompletedBtn = document.getElementById('clearCompletedBtn');
+
+// Stats Counters DOM
+const totalTasksCount = document.getElementById('totalTasksCount');
+const pendingTasksCount = document.getElementById('pendingTasksCount');
+const completedTasksCount = document.getElementById('completedTasksCount');
+const productivityScore = document.getElementById('productivityScore');
+const progressBar = document.getElementById('progressBar');
+
+// Header Meta DOM
+const themeToggleBtn = document.getElementById('themeToggle');
+const themeIcon = document.getElementById('themeIcon');
+const themeLabel = document.getElementById('themeLabel');
+const dateText = document.getElementById('dateText');
+
+// Initial Starter Tasks (Demonstrates app capability)
 const DEFAULT_TASKS = [
     {
         id: 'task-1',
@@ -61,12 +82,55 @@ const DEFAULT_TASKS = [
 
 // Initialize Application
 function initApp() {
+    initTheme();
+    initDateDisplay();
     loadTasks();
     setupCoreEventListeners();
+    setupInteractiveEventListeners();
     renderTasks();
+    updateStatsDisplay();
 }
 
-// Load tasks from LocalStorage or default
+// ==========================================
+// Theme Management (Light / Dark Mode)
+// ==========================================
+function initTheme() {
+    const savedTheme = localStorage.getItem(THEME_KEY) || 
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme(savedTheme);
+}
+
+function applyTheme(theme) {
+    state.theme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem(THEME_KEY, theme);
+
+    if (theme === 'dark') {
+        themeIcon.className = 'fa-solid fa-sun';
+        themeLabel.textContent = 'Light Mode';
+    } else {
+        themeIcon.className = 'fa-solid fa-moon';
+        themeLabel.textContent = 'Dark Mode';
+    }
+}
+
+function toggleTheme() {
+    const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+    showToast(`Switched to ${nextTheme} mode`, 'info');
+}
+
+// Display Current Formatted Date
+function initDateDisplay() {
+    if (!dateText) return;
+    const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+    const today = new Date().toLocaleDateString('en-US', options);
+    dateText.textContent = today;
+}
+
+// ==========================================
+// Data Persistence (LocalStorage)
+// ==========================================
 function loadTasks() {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -77,25 +141,87 @@ function loadTasks() {
             saveTasks();
         }
     } catch (e) {
-        console.error('Error loading tasks from localStorage', e);
+        console.error('Error reading localStorage', e);
         state.tasks = [...DEFAULT_TASKS];
     }
 }
 
-// Persist tasks to LocalStorage
 function saveTasks() {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
     } catch (e) {
-        console.error('Error saving tasks to localStorage', e);
+        console.error('Error writing to localStorage', e);
     }
 }
 
-// Setup form submission and listeners
+// ==========================================
+// Event Listeners & User Interactions
+// ==========================================
 function setupCoreEventListeners() {
     if (taskForm) {
         taskForm.addEventListener('submit', handleTaskSubmit);
     }
+}
+
+function setupInteractiveEventListeners() {
+    // Theme Switcher
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+
+    // Live Search Input with Clear Button
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            state.searchQuery = e.target.value.trim();
+            clearSearchBtn.style.display = state.searchQuery ? 'block' : 'none';
+            renderTasks();
+        });
+    }
+
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            state.searchQuery = '';
+            clearSearchBtn.style.display = 'none';
+            searchInput.focus();
+            renderTasks();
+        });
+    }
+
+    // Sorting Dropdown
+    if (sortFilterSelect) {
+        sortFilterSelect.addEventListener('change', (e) => {
+            state.sortBy = e.target.value;
+            renderTasks();
+        });
+    }
+
+    // Filter Tabs
+    if (filterTabsContainer) {
+        filterTabsContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.tab-btn');
+            if (!btn) return;
+
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            state.currentFilter = btn.dataset.filter;
+            renderTasks();
+        });
+    }
+
+    // Clear Completed Tasks
+    if (clearCompletedBtn) {
+        clearCompletedBtn.addEventListener('click', handleClearCompleted);
+    }
+
+    // Keyboard shortcut: Press '/' to focus search
+    document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement !== searchInput && document.activeElement !== taskTitleInput) {
+            e.preventDefault();
+            searchInput.focus();
+        }
+    });
 }
 
 // Handle Task Creation
@@ -122,6 +248,7 @@ function handleTaskSubmit(e) {
     state.tasks.unshift(newTask);
     saveTasks();
     renderTasks();
+    updateStatsDisplay();
     taskForm.reset();
 
     showToast(`Task "${title}" created successfully!`, 'success');
@@ -135,12 +262,13 @@ function toggleTaskCompletion(taskId) {
     task.completed = !task.completed;
     saveTasks();
     renderTasks();
+    updateStatsDisplay();
 
-    const message = task.completed ? 'Task marked as completed!' : 'Task restored to pending.';
-    showToast(message, 'info');
+    const msg = task.completed ? `Great job! Completed "${task.title}"` : `Marked "${task.title}" as pending`;
+    showToast(msg, task.completed ? 'success' : 'info');
 }
 
-// Delete Task
+// Delete Single Task
 function deleteTask(taskId) {
     const taskIndex = state.tasks.findIndex(t => t.id === taskId);
     if (taskIndex === -1) return;
@@ -149,17 +277,55 @@ function deleteTask(taskId) {
     state.tasks.splice(taskIndex, 1);
     saveTasks();
     renderTasks();
+    updateStatsDisplay();
 
-    showToast(`Deleted task: "${taskTitle}"`, 'delete');
+    showToast(`Deleted: "${taskTitle}"`, 'delete');
 }
 
-// Filter and Sort Tasks
+// Batch Clear Completed Tasks
+function handleClearCompleted() {
+    const completedCount = state.tasks.filter(t => t.completed).length;
+    if (completedCount === 0) {
+        showToast('No completed tasks to clear.', 'warning');
+        return;
+    }
+
+    if (confirm(`Are you sure you want to remove all ${completedCount} completed task(s)?`)) {
+        state.tasks = state.tasks.filter(t => !t.completed);
+        saveTasks();
+        renderTasks();
+        updateStatsDisplay();
+        showToast(`Cleared ${completedCount} completed task(s)!`, 'delete');
+    }
+}
+
+// ==========================================
+// Analytics & Statistics Dashboard
+// ==========================================
+function updateStatsDisplay() {
+    const total = state.tasks.length;
+    const completed = state.tasks.filter(t => t.completed).length;
+    const pending = total - completed;
+    const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    if (totalTasksCount) totalTasksCount.textContent = total;
+    if (pendingTasksCount) pendingTasksCount.textContent = pending;
+    if (completedTasksCount) completedTasksCount.textContent = completed;
+    if (productivityScore) productivityScore.textContent = `${rate}%`;
+    if (progressBar) progressBar.style.width = `${rate}%`;
+}
+
+// ==========================================
+// Filtering & Sorting Logic
+// ==========================================
 function getFilteredTasks() {
     return state.tasks.filter(task => {
-        // Status & Category filters
+        // Status filter
         if (state.currentFilter === 'pending' && task.completed) return false;
         if (state.currentFilter === 'completed' && !task.completed) return false;
         if (state.currentFilter === 'high' && task.priority !== 'high') return false;
+
+        // Category filter
         if (['Study', 'Work', 'Personal', 'Health'].includes(state.currentFilter)) {
             if (task.category !== state.currentFilter) return false;
         }
@@ -169,7 +335,8 @@ function getFilteredTasks() {
             const query = state.searchQuery.toLowerCase();
             const titleMatch = task.title.toLowerCase().includes(query);
             const descMatch = task.description && task.description.toLowerCase().includes(query);
-            if (!titleMatch && !descMatch) return false;
+            const categoryMatch = task.category.toLowerCase().includes(query);
+            if (!titleMatch && !descMatch && !categoryMatch) return false;
         }
 
         return true;
@@ -190,7 +357,9 @@ function getFilteredTasks() {
     });
 }
 
-// Render Tasks to DOM
+// ==========================================
+// DOM Rendering Engine
+// ==========================================
 function renderTasks() {
     const filteredTasks = getFilteredTasks();
 
@@ -211,7 +380,7 @@ function renderTasks() {
                                class="task-checkbox" 
                                ${task.completed ? 'checked' : ''} 
                                onchange="toggleTaskCompletion('${task.id}')"
-                               aria-label="Mark task complete">
+                               aria-label="Mark task as complete">
                     </div>
                     <div class="task-content">
                         <div class="task-header-row">
@@ -243,14 +412,9 @@ function renderTasks() {
             `;
         }).join('');
     }
-
-    // Trigger stats update if function exists (expanded in feature branch)
-    if (typeof updateStatsDisplay === 'function') {
-        updateStatsDisplay();
-    }
 }
 
-// Utility: Escape HTML to prevent injection
+// Utility: Escape HTML
 function escapeHTML(str) {
     if (!str) return '';
     return str
@@ -261,7 +425,7 @@ function escapeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Toast Notification System
+// Toast Notifications
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -290,5 +454,5 @@ function showToast(message, type = 'info') {
     }, 3200);
 }
 
-// Auto-run initialization on script load
+// Run on load
 document.addEventListener('DOMContentLoaded', initApp);
