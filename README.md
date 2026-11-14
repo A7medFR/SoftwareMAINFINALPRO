@@ -64,10 +64,10 @@ In today's fast-paced academic and professional environments, keeping track of d
 ## 🛠️ Tech Stack & Architecture
 
 - **Markup:** Semantic HTML5 with accessibility attributes (`aria-labels`, responsive viewport).
-- **Styling:** Modern CSS3 featuring CSS Custom Properties (Variables), Flexbox, CSS Grid, and subtle glassmorphism effects.
-- **Typography & Icons:** Plus Jakarta Sans typography and Font Awesome 6 icons.
-- **Scripting:** Pure Vanilla JavaScript (ES6+) with modular state handling and native Browser `localStorage` API.
-- **Version Control:** Git & GitHub (Multi-branch feature workflow).
+- **Styling:** Minimalist CSS3 inspired by Linear and Notion, featuring dark/light custom properties, compact list rows, and zero bloated frameworks.
+- **Typography & Icons:** Inter typography, JetBrains Mono for metadata/keys, and inline SVG icons.
+- **Scripting:** Pure Vanilla JavaScript (ES6+) with modular state handling, keyboard shortcuts, and native Browser `localStorage` API.
+- **Version Control:** Git & GitHub (Multi-branch feature & refactor workflow).
 
 ---
 
@@ -76,15 +76,17 @@ In today's fast-paced academic and professional environments, keeping track of d
 In compliance with the project guidelines, this repository follows a **Feature Branch Workflow**, ensuring that every significant update was developed in isolation before being merged into the `main` production branch:
 
 ```text
-main ─────────────────●──────────●──────────●──────────●──────── (Production Ready)
-                       \        /  \        /  \        /
-feature/ui-dashboard ───●──────●    \      /    \      /
-                                     \    /      \    /
-feature/task-crud-storage ────────────●──●        \  /
-                                                   \ /
-feature/theme-filters-stats ────────────────────────●──●
-                                                        \
-docs/project-documentation ──────────────────────────────●─────●
+main ─────────────────●──────────●──────────●──────────●──────────●──── (Production Ready)
+                       \        /  \        /  \        /  \        /
+feature/ui-dashboard ───●──────●    \      /    \      /    \      /
+                                     \    /      \    /      \    /
+feature/task-crud-storage ────────────●──●        \  /        \  /
+                                                   \ /          \/
+feature/theme-filters-stats ────────────────────────●──●        /\
+                                                        \      /  \
+docs/project-documentation ──────────────────────────────●────●    \
+                                                                    \
+refactor/linear-minimalist-ui ───────────────────────────────────────●
 ```
 
 ### 📌 Branch Log & Milestones
@@ -94,6 +96,7 @@ docs/project-documentation ─────────────────�
 3. **`feature/task-crud-storage`:** Implemented core task creation, deletion, status toggling, and `localStorage` persistence in `app.js`. *(Merged via PR/no-ff)*
 4. **`feature/theme-filters-stats`:** Added dark/light mode toggle, dynamic search engine, category filter tabs, sorting algorithm, and productivity score bar. *(Merged via PR/no-ff)*
 5. **`docs/project-documentation`:** Crafted comprehensive documentation, project purpose, team contributor credits, and setup guide. *(Merged via PR/no-ff)*
+6. **`refactor/linear-minimalist-ui`:** Complete UI/UX overhaul to a sleek, developer-grade Linear / Notion minimalist design with command-style quick capture and keyboard shortcuts. *(Merged via PR/no-ff)*
 
 ---
 

@@ -1,148 +1,170 @@
 /**
- * TaskFlow &mdash; Modern Productivity & Task Management Web App
- * Interactive Engine: CRUD, LocalStorage, Themes, Dynamic Filters & Analytics
- * Final Project: Git & GitHub Workflow Demonstration
+ * TaskFlow &mdash; Workspace Engine (Linear / Notion Minimalist Edition)
+ * Final Project: Git & GitHub Duo Workflow
  */
 
 // Application State
 const state = {
     tasks: [],
-    currentFilter: 'all',
+    view: 'all',          // 'all' | 'active' | 'urgent' | 'completed'
+    projectFilter: 'all', // 'all' | 'Coursework' | 'Development' | etc.
     searchQuery: '',
-    sortBy: 'newest',
-    theme: 'light'
+    sortBy: 'date-desc',
+    theme: 'dark'
 };
 
-const STORAGE_KEY = 'taskflow_data_v1';
-const THEME_KEY = 'taskflow_theme';
+const STORAGE_KEY = 'taskflow_tasks_v2';
+const THEME_KEY = 'taskflow_theme_pref';
 
-// DOM Element References
-const taskForm = document.getElementById('taskForm');
-const taskTitleInput = document.getElementById('taskTitle');
-const taskCategoryInput = document.getElementById('taskCategory');
-const taskPriorityInput = document.getElementById('taskPriority');
-const taskDueDateInput = document.getElementById('taskDueDate');
-const taskDescInput = document.getElementById('taskDesc');
+// DOM References
+const quickAddForm = document.getElementById('quickAddForm');
+const taskInput = document.getElementById('taskInput');
+const categorySelect = document.getElementById('categorySelect');
+const prioritySelect = document.getElementById('prioritySelect');
+const dueDateInput = document.getElementById('dueDateInput');
+const taskNoteInput = document.getElementById('taskNoteInput');
+
 const taskListContainer = document.getElementById('taskList');
-const emptyStateElement = document.getElementById('emptyState');
+const emptyState = document.getElementById('emptyState');
+const currentViewLabel = document.getElementById('currentViewLabel');
 
-// Search & Filter DOM
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearchBtn');
-const sortFilterSelect = document.getElementById('sortFilter');
-const filterTabsContainer = document.getElementById('filterTabs');
-const clearCompletedBtn = document.getElementById('clearCompletedBtn');
+const sortSelect = document.getElementById('sortSelect');
+const projectFilterSelect = document.getElementById('projectFilterSelect');
+const viewTabs = document.getElementById('viewTabs');
+const clearDoneBtn = document.getElementById('clearDoneBtn');
 
-// Stats Counters DOM
-const totalTasksCount = document.getElementById('totalTasksCount');
-const pendingTasksCount = document.getElementById('pendingTasksCount');
-const completedTasksCount = document.getElementById('completedTasksCount');
-const productivityScore = document.getElementById('productivityScore');
-const progressBar = document.getElementById('progressBar');
+const statActive = document.getElementById('statActive');
+const statCompleted = document.getElementById('statCompleted');
+const statRate = document.getElementById('statRate');
 
-// Header Meta DOM
-const themeToggleBtn = document.getElementById('themeToggle');
-const themeIcon = document.getElementById('themeIcon');
-const themeLabel = document.getElementById('themeLabel');
-const dateText = document.getElementById('dateText');
+const countAll = document.getElementById('countAll');
+const countActive = document.getElementById('countActive');
+const countUrgent = document.getElementById('countUrgent');
+const countCompleted = document.getElementById('countCompleted');
 
-// Initial Starter Tasks (Demonstrates app capability)
-const DEFAULT_TASKS = [
+const themeToggle = document.getElementById('themeToggle');
+const toastNotification = document.getElementById('toastNotification');
+
+// Authentic Default Tasks
+const INITIAL_TASKS = [
     {
-        id: 'task-1',
+        id: 't-101',
         title: 'Complete Git & GitHub Duo Final Project',
-        description: 'Implement multi-branch workflow, detailed Readme.md, and merge into main branch.',
-        category: 'Study',
-        priority: 'high',
-        dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+        note: 'Multi-branch workflow with atomic commits and PR-style merges.',
+        project: 'Coursework',
+        priority: 'urgent',
+        dueDate: getRelativeDate(2),
         completed: false,
-        createdAt: new Date(Date.now() - 3600000 * 4).toISOString()
+        createdAt: Date.now() - 3600000 * 5
     },
     {
-        id: 'task-2',
-        title: 'Review Pull Request & Documentation',
-        description: 'Verify project purpose, key features, and contributor names in README.md.',
-        category: 'Work',
+        id: 't-102',
+        title: 'Refactor UI to minimalist Linear / Notion layout',
+        note: 'Eliminated AI clichés; implemented sleek typography and command capture.',
+        project: 'Development',
         priority: 'medium',
-        dueDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
+        dueDate: getRelativeDate(1),
         completed: true,
-        createdAt: new Date(Date.now() - 3600000 * 8).toISOString()
+        createdAt: Date.now() - 3600000 * 12
     },
     {
-        id: 'task-3',
-        title: 'Submit Repository Link to Instructor',
-        description: 'Send GitHub repository link to bdryshdhy960@gmail.com upon project completion.',
-        category: 'Study',
-        priority: 'high',
-        dueDate: new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0],
+        id: 't-103',
+        title: 'Review collaborator contributions & documentation',
+        note: 'Confirm both team members are credited in README.md and repo history.',
+        project: 'Coursework',
+        priority: 'none',
+        dueDate: getRelativeDate(3),
         completed: false,
-        createdAt: new Date(Date.now() - 3600000 * 12).toISOString()
+        createdAt: Date.now() - 3600000 * 24
+    },
+    {
+        id: 't-104',
+        title: 'Submit repository link to bdryshdhy960@gmail.com',
+        note: 'Final email delivery with GitHub remote link and branch log.',
+        project: 'Coursework',
+        priority: 'urgent',
+        dueDate: getRelativeDate(4),
+        completed: false,
+        createdAt: Date.now() - 3600000 * 30
     }
 ];
 
-// Initialize Application
-function initApp() {
-    initTheme();
-    initDateDisplay();
-    loadTasks();
-    setupCoreEventListeners();
-    setupInteractiveEventListeners();
-    renderTasks();
-    updateStatsDisplay();
+// Helper: generate ISO date YYYY-MM-DD offset by days
+function getRelativeDate(offsetDays) {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return d.toISOString().split('T')[0];
 }
 
-// ==========================================
-// Theme Management (Light / Dark Mode)
-// ==========================================
+// Format date nicely for human display
+function formatDueChip(dateStr) {
+    if (!dateStr) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const target = new Date(dateStr + 'T00:00:00');
+    const diffTime = target - today;
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+        return { text: `${Math.abs(diffDays)}d overdue`, isOverdue: true };
+    } else if (diffDays === 0) {
+        return { text: 'Today', isOverdue: false };
+    } else if (diffDays === 1) {
+        return { text: 'Tomorrow', isOverdue: false };
+    } else if (diffDays < 7) {
+        const weekday = target.toLocaleDateString('en-US', { weekday: 'short' });
+        return { text: weekday, isOverdue: false };
+    } else {
+        const monthDay = target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return { text: monthDay, isOverdue: false };
+    }
+}
+
+// ==========================================================================
+// Initialization
+// ==========================================================================
+function init() {
+    initTheme();
+    loadTasks();
+    setupListeners();
+    render();
+}
+
 function initTheme() {
-    const savedTheme = localStorage.getItem(THEME_KEY) || 
-        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    applyTheme(savedTheme);
+    const saved = localStorage.getItem(THEME_KEY) || 'dark';
+    applyTheme(saved);
 }
 
 function applyTheme(theme) {
     state.theme = theme;
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(THEME_KEY, theme);
-
-    if (theme === 'dark') {
-        themeIcon.className = 'fa-solid fa-sun';
-        themeLabel.textContent = 'Light Mode';
-    } else {
-        themeIcon.className = 'fa-solid fa-moon';
-        themeLabel.textContent = 'Dark Mode';
-    }
 }
 
 function toggleTheme() {
-    const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
-    applyTheme(nextTheme);
-    showToast(`Switched to ${nextTheme} mode`, 'info');
+    const next = state.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    showToast(`Switched to ${next} mode`);
 }
 
-// Display Current Formatted Date
-function initDateDisplay() {
-    if (!dateText) return;
-    const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
-    const today = new Date().toLocaleDateString('en-US', options);
-    dateText.textContent = today;
-}
-
-// ==========================================
-// Data Persistence (LocalStorage)
-// ==========================================
+// ==========================================================================
+// LocalStorage Persistence
+// ==========================================================================
 function loadTasks() {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
             state.tasks = JSON.parse(stored);
         } else {
-            state.tasks = [...DEFAULT_TASKS];
+            state.tasks = [...INITIAL_TASKS];
             saveTasks();
         }
     } catch (e) {
-        console.error('Error reading localStorage', e);
-        state.tasks = [...DEFAULT_TASKS];
+        console.error('Failed to parse localStorage tasks:', e);
+        state.tasks = [...INITIAL_TASKS];
     }
 }
 
@@ -150,271 +172,280 @@ function saveTasks() {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
     } catch (e) {
-        console.error('Error writing to localStorage', e);
+        console.error('Failed to write tasks to localStorage:', e);
     }
 }
 
-// ==========================================
-// Event Listeners & User Interactions
-// ==========================================
-function setupCoreEventListeners() {
-    if (taskForm) {
-        taskForm.addEventListener('submit', handleTaskSubmit);
-    }
-}
+// ==========================================================================
+// Event Listeners
+// ==========================================================================
+function setupListeners() {
+    // Quick Add Form
+    quickAddForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const title = taskInput.value.trim();
+        if (!title) return;
 
-function setupInteractiveEventListeners() {
-    // Theme Switcher
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', toggleTheme);
-    }
+        const newTask = {
+            id: 't-' + Date.now(),
+            title: title,
+            note: taskNoteInput.value.trim(),
+            project: categorySelect.value,
+            priority: prioritySelect.value,
+            dueDate: dueDateInput.value,
+            completed: false,
+            createdAt: Date.now()
+        };
 
-    // Live Search Input with Clear Button
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            state.searchQuery = e.target.value.trim();
-            clearSearchBtn.style.display = state.searchQuery ? 'block' : 'none';
-            renderTasks();
-        });
-    }
+        state.tasks.unshift(newTask);
+        saveTasks();
 
-    if (clearSearchBtn) {
-        clearSearchBtn.addEventListener('click', () => {
-            searchInput.value = '';
-            state.searchQuery = '';
-            clearSearchBtn.style.display = 'none';
-            searchInput.focus();
-            renderTasks();
-        });
-    }
+        taskInput.value = '';
+        taskNoteInput.value = '';
+        taskInput.focus();
 
-    // Sorting Dropdown
-    if (sortFilterSelect) {
-        sortFilterSelect.addEventListener('change', (e) => {
-            state.sortBy = e.target.value;
-            renderTasks();
-        });
-    }
+        render();
+        showToast('Task added');
+    });
 
-    // Filter Tabs
-    if (filterTabsContainer) {
-        filterTabsContainer.addEventListener('click', (e) => {
-            const btn = e.target.closest('.tab-btn');
-            if (!btn) return;
+    // View Tabs
+    viewTabs.addEventListener('click', (e) => {
+        const btn = e.target.closest('.seg-btn');
+        if (!btn) return;
 
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+        document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
 
-            state.currentFilter = btn.dataset.filter;
-            renderTasks();
-        });
-    }
+        state.view = btn.dataset.view;
+        const viewLabels = {
+            all: 'All Tasks',
+            active: 'Active',
+            urgent: 'Urgent',
+            completed: 'Completed'
+        };
+        currentViewLabel.textContent = viewLabels[state.view] || 'Tasks';
+        render();
+    });
 
-    // Clear Completed Tasks
-    if (clearCompletedBtn) {
-        clearCompletedBtn.addEventListener('click', handleClearCompleted);
-    }
+    // Search Input
+    searchInput.addEventListener('input', (e) => {
+        state.searchQuery = e.target.value.trim().toLowerCase();
+        clearSearchBtn.style.display = state.searchQuery ? 'block' : 'none';
+        render();
+    });
 
-    // Keyboard shortcut: Press '/' to focus search
+    clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        state.searchQuery = '';
+        clearSearchBtn.style.display = 'none';
+        searchInput.focus();
+        render();
+    });
+
+    // Filters & Sorting
+    sortSelect.addEventListener('change', (e) => {
+        state.sortBy = e.target.value;
+        render();
+    });
+
+    projectFilterSelect.addEventListener('change', (e) => {
+        state.projectFilter = e.target.value;
+        render();
+    });
+
+    clearDoneBtn.addEventListener('click', () => {
+        const doneCount = state.tasks.filter(t => t.completed).length;
+        if (!doneCount) {
+            showToast('No completed tasks to clear');
+            return;
+        }
+        state.tasks = state.tasks.filter(t => !t.completed);
+        saveTasks();
+        render();
+        showToast(`Cleared ${doneCount} completed task(s)`);
+    });
+
+    // Theme Toggle
+    themeToggle.addEventListener('click', toggleTheme);
+
+    // Global Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
-        if (e.key === '/' && document.activeElement !== searchInput && document.activeElement !== taskTitleInput) {
+        // Ignore if currently typing inside an input/select
+        const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        const isTyping = ['input', 'select', 'textarea'].includes(activeTag);
+
+        if (e.key === 'Escape') {
+            if (document.activeElement) document.activeElement.blur();
+            if (state.searchQuery) {
+                searchInput.value = '';
+                state.searchQuery = '';
+                clearSearchBtn.style.display = 'none';
+                render();
+            }
+            return;
+        }
+
+        if (isTyping) return;
+
+        if (e.key.toLowerCase() === 'n') {
+            e.preventDefault();
+            taskInput.focus();
+        } else if (e.key === '/') {
             e.preventDefault();
             searchInput.focus();
+        } else if (e.key.toLowerCase() === 't') {
+            e.preventDefault();
+            toggleTheme();
         }
     });
 }
 
-// Handle Task Creation
-function handleTaskSubmit(e) {
-    e.preventDefault();
-
-    const title = taskTitleInput.value.trim();
-    if (!title) {
-        showToast('Please enter a task title.', 'warning');
-        return;
-    }
-
-    const newTask = {
-        id: 'task-' + Date.now(),
-        title: title,
-        category: taskCategoryInput.value,
-        priority: taskPriorityInput.value,
-        dueDate: taskDueDateInput.value,
-        description: taskDescInput.value.trim(),
-        completed: false,
-        createdAt: new Date().toISOString()
-    };
-
-    state.tasks.unshift(newTask);
-    saveTasks();
-    renderTasks();
-    updateStatsDisplay();
-    taskForm.reset();
-
-    showToast(`Task "${title}" created successfully!`, 'success');
-}
-
-// Toggle Task Completion Status
-function toggleTaskCompletion(taskId) {
-    const task = state.tasks.find(t => t.id === taskId);
+// ==========================================================================
+// Task Actions
+// ==========================================================================
+function toggleTask(id) {
+    const task = state.tasks.find(t => t.id === id);
     if (!task) return;
 
     task.completed = !task.completed;
     saveTasks();
-    renderTasks();
-    updateStatsDisplay();
-
-    const msg = task.completed ? `Great job! Completed "${task.title}"` : `Marked "${task.title}" as pending`;
-    showToast(msg, task.completed ? 'success' : 'info');
+    render();
+    showToast(task.completed ? 'Task marked complete' : 'Task restored');
 }
 
-// Delete Single Task
-function deleteTask(taskId) {
-    const taskIndex = state.tasks.findIndex(t => t.id === taskId);
-    if (taskIndex === -1) return;
-
-    const taskTitle = state.tasks[taskIndex].title;
-    state.tasks.splice(taskIndex, 1);
+function deleteTask(id) {
+    state.tasks = state.tasks.filter(t => t.id !== id);
     saveTasks();
-    renderTasks();
-    updateStatsDisplay();
-
-    showToast(`Deleted: "${taskTitle}"`, 'delete');
+    render();
+    showToast('Task deleted');
 }
 
-// Batch Clear Completed Tasks
-function handleClearCompleted() {
-    const completedCount = state.tasks.filter(t => t.completed).length;
-    if (completedCount === 0) {
-        showToast('No completed tasks to clear.', 'warning');
-        return;
-    }
-
-    if (confirm(`Are you sure you want to remove all ${completedCount} completed task(s)?`)) {
-        state.tasks = state.tasks.filter(t => !t.completed);
-        saveTasks();
-        renderTasks();
-        updateStatsDisplay();
-        showToast(`Cleared ${completedCount} completed task(s)!`, 'delete');
-    }
-}
-
-// ==========================================
-// Analytics & Statistics Dashboard
-// ==========================================
-function updateStatsDisplay() {
-    const total = state.tasks.length;
-    const completed = state.tasks.filter(t => t.completed).length;
-    const pending = total - completed;
-    const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    if (totalTasksCount) totalTasksCount.textContent = total;
-    if (pendingTasksCount) pendingTasksCount.textContent = pending;
-    if (completedTasksCount) completedTasksCount.textContent = completed;
-    if (productivityScore) productivityScore.textContent = `${rate}%`;
-    if (progressBar) progressBar.style.width = `${rate}%`;
-}
-
-// ==========================================
-// Filtering & Sorting Logic
-// ==========================================
-function getFilteredTasks() {
+// ==========================================================================
+// Filtering & Sorting
+// ==========================================================================
+function getVisibleTasks() {
     return state.tasks.filter(task => {
-        // Status filter
-        if (state.currentFilter === 'pending' && task.completed) return false;
-        if (state.currentFilter === 'completed' && !task.completed) return false;
-        if (state.currentFilter === 'high' && task.priority !== 'high') return false;
+        // View filtering
+        if (state.view === 'active' && task.completed) return false;
+        if (state.view === 'completed' && !task.completed) return false;
+        if (state.view === 'urgent' && task.priority !== 'urgent') return false;
 
-        // Category filter
-        if (['Study', 'Work', 'Personal', 'Health'].includes(state.currentFilter)) {
-            if (task.category !== state.currentFilter) return false;
-        }
+        // Project filtering
+        if (state.projectFilter !== 'all' && task.project !== state.projectFilter) return false;
 
-        // Search query filter
+        // Search filtering
         if (state.searchQuery) {
-            const query = state.searchQuery.toLowerCase();
-            const titleMatch = task.title.toLowerCase().includes(query);
-            const descMatch = task.description && task.description.toLowerCase().includes(query);
-            const categoryMatch = task.category.toLowerCase().includes(query);
-            if (!titleMatch && !descMatch && !categoryMatch) return false;
+            const inTitle = task.title.toLowerCase().includes(state.searchQuery);
+            const inNote = task.note && task.note.toLowerCase().includes(state.searchQuery);
+            const inProject = task.project.toLowerCase().includes(state.searchQuery);
+            if (!inTitle && !inNote && !inProject) return false;
         }
 
         return true;
     }).sort((a, b) => {
-        if (state.sortBy === 'newest') {
-            return new Date(b.createdAt) - new Date(a.createdAt);
-        } else if (state.sortBy === 'oldest') {
-            return new Date(a.createdAt) - new Date(b.createdAt);
+        if (state.sortBy === 'date-desc') {
+            return b.createdAt - a.createdAt;
+        } else if (state.sortBy === 'date-asc') {
+            return a.createdAt - b.createdAt;
         } else if (state.sortBy === 'priority') {
-            const weights = { high: 3, medium: 2, low: 1 };
-            return weights[b.priority] - weights[a.priority];
-        } else if (state.sortBy === 'dueDate') {
+            const rank = { urgent: 3, medium: 2, none: 1 };
+            return (rank[b.priority] || 1) - (rank[a.priority] || 1);
+        } else if (state.sortBy === 'due-date') {
             if (!a.dueDate) return 1;
             if (!b.dueDate) return -1;
-            return new Date(a.dueDate) - new Date(b.dueDate);
+            return a.dueDate.localeCompare(b.dueDate);
         }
         return 0;
     });
 }
 
-// ==========================================
-// DOM Rendering Engine
-// ==========================================
-function renderTasks() {
-    const filteredTasks = getFilteredTasks();
+// ==========================================================================
+// DOM Rendering
+// ==========================================================================
+function render() {
+    updateCounters();
+    const visibleTasks = getVisibleTasks();
 
-    if (filteredTasks.length === 0) {
+    if (visibleTasks.length === 0) {
         taskListContainer.innerHTML = '';
-        emptyStateElement.style.display = 'block';
-    } else {
-        emptyStateElement.style.display = 'none';
-        taskListContainer.innerHTML = filteredTasks.map(task => {
-            const isOverdue = task.dueDate && !task.completed && new Date(task.dueDate) < new Date(new Date().toDateString());
-            const safeTitle = escapeHTML(task.title);
-            const safeDesc = escapeHTML(task.description || '');
+        emptyState.style.display = 'block';
+        return;
+    }
 
-            return `
-                <div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
-                    <div class="task-checkbox-wrapper">
-                        <input type="checkbox" 
-                               class="task-checkbox" 
-                               ${task.completed ? 'checked' : ''} 
-                               onchange="toggleTaskCompletion('${task.id}')"
-                               aria-label="Mark task as complete">
+    emptyState.style.display = 'none';
+    taskListContainer.innerHTML = visibleTasks.map(task => {
+        const dueInfo = formatDueChip(task.dueDate);
+        const priorityLabels = { urgent: 'Urgent', medium: 'Medium', none: 'Normal' };
+
+        return `
+            <div class="task-row ${task.completed ? 'completed' : ''}" data-id="${task.id}">
+                <div class="checkbox-cell">
+                    <button class="check-circle" onclick="toggleTask('${task.id}')" aria-label="Toggle task completion">
+                        <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="content-cell">
+                    <div class="row-primary">
+                        <span class="task-text">${escapeHTML(task.title)}</span>
                     </div>
-                    <div class="task-content">
-                        <div class="task-header-row">
-                            <span class="task-title">${safeTitle}</span>
-                            <div class="task-actions">
-                                <button class="btn-icon delete" 
-                                        onclick="deleteTask('${task.id}')" 
-                                        title="Delete task"
-                                        aria-label="Delete task">
-                                    <i class="fa-regular fa-trash-can"></i>
-                                </button>
-                            </div>
-                        </div>
 
-                        ${safeDesc ? `<p class="task-desc">${safeDesc}</p>` : ''}
+                    ${task.note ? `<div class="task-inline-note">${escapeHTML(task.note)}</div>` : ''}
 
-                        <div class="task-meta-row">
-                            <span class="tag tag-category">${task.category}</span>
-                            <span class="tag tag-priority-${task.priority}">Priority: ${task.priority}</span>
-                            ${task.dueDate ? `
-                                <span class="task-due-date ${isOverdue ? 'overdue' : ''}">
-                                    <i class="fa-regular fa-calendar"></i>
-                                    ${task.dueDate} ${isOverdue ? '(Overdue)' : ''}
-                                </span>
-                            ` : ''}
-                        </div>
+                    <div class="row-secondary">
+                        <span class="tag-badge tag-project">#${escapeHTML(task.project.toLowerCase())}</span>
+
+                        <span class="priority-indicator priority-${task.priority}">
+                            <span class="priority-dot"></span>
+                            ${priorityLabels[task.priority] || 'Normal'}
+                        </span>
+
+                        ${dueInfo ? `
+                            <span class="due-chip ${dueInfo.isOverdue && !task.completed ? 'overdue' : ''}">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                ${dueInfo.text}
+                            </span>
+                        ` : ''}
                     </div>
                 </div>
-            `;
-        }).join('');
-    }
+
+                <div class="actions-cell">
+                    <button class="row-btn btn-delete" onclick="deleteTask('${task.id}')" title="Delete task">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
-// Utility: Escape HTML
+function updateCounters() {
+    const total = state.tasks.length;
+    const completed = state.tasks.filter(t => t.completed).length;
+    const active = total - completed;
+    const urgent = state.tasks.filter(t => t.priority === 'urgent' && !t.completed).length;
+    const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    countAll.textContent = total;
+    countActive.textContent = active;
+    countUrgent.textContent = urgent;
+    countCompleted.textContent = completed;
+
+    statActive.textContent = active;
+    statCompleted.textContent = completed;
+    statRate.textContent = `${rate}%`;
+}
+
 function escapeHTML(str) {
     if (!str) return '';
     return str
@@ -425,34 +456,17 @@ function escapeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Toast Notifications
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
+let toastTimer = null;
+function showToast(message) {
+    if (!toastNotification) return;
+    toastNotification.textContent = message;
+    toastNotification.classList.add('visible');
 
-    const icons = {
-        success: 'fa-solid fa-circle-check',
-        info: 'fa-solid fa-circle-info',
-        warning: 'fa-solid fa-triangle-exclamation',
-        delete: 'fa-solid fa-trash'
-    };
-
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-        <i class="${icons[type] || icons.info}"></i>
-        <span>${message}</span>
-    `;
-
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(10px)';
-        toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 3200);
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        toastNotification.classList.remove('visible');
+    }, 2200);
 }
 
-// Run on load
-document.addEventListener('DOMContentLoaded', initApp);
+// Launch
+document.addEventListener('DOMContentLoaded', init);
