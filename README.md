@@ -16,7 +16,7 @@ This project was built collaboratively as a **Duo Team** following best practice
 | # | Contributor Name | Role & Core Responsibilities | Contact / Profile |
 |---|------------------|------------------------------|-------------------|
 | **1** | **Ahmed Farzdag** | Frontend Architecture, UI Layout, Git Repo Setup, LocalStorage Engine | `a7medfarzdag@gmail.com` |
-| **2** | **Mustafa Altayeb** | Task Filtering, Dark Mode Theming, QA Testing & Documentation | `[partner.email@example.com]` |
+| **2** | **Mustafa Altayeb** | Task Filtering, Dark Mode Theming, QA Testing & Documentation | `[mustafa@gmail.com]` |
 
 > *Note: If submitting with your team partner, you can quickly update the table above with your duo partner's exact name and student ID.*
 
